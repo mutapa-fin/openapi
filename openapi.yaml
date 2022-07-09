@@ -1,0 +1,426 @@
+openapi: 3.0.2
+servers:
+  - description: Local development
+    url: http://localhost:8085
+info:
+  description: Mutapa.co Accounts is an HTTP service which represents both a general ledger and chart of accounts for customers. The service is designed to abstract over various core systems and provide a uniform API for developers.
+  version: 1.0.0
+  title: Accounts API
+  contact:
+    url: "https://mutapa.co/contact"
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Accounts
+    description: |
+      Accounts endpoints cover both Customers and their Accounts at a Financial Instittuion.
+       - A customer is a single individual who can own account's. Customers need to be verified via KYC before they can make transactions or own accounts.
+       - An account is financial institution account associated with a single customer
+paths:
+  /ping:
+    get:
+      tags:
+        - Accounts
+      summary: Ping Accounts service
+      description: Check the Accounts service to check if running
+      operationId: ping
+      responses:
+        '200':
+          description: Service is running properly
+  /accounts/search:
+    get:
+      tags:
+        - Accounts
+      summary: Search for Accounts
+      description: Find accounts which match all specified query parameters
+      operationId: searchAccounts
+      parameters:
+        - name: number
+          in: query
+          description: Account number
+          schema:
+            type: string
+            example: 2151
+        - name: routingNumber
+          in: query
+          description: ABA routing number for the Financial Institution
+          schema:
+            type: string
+            example: "69100013"
+        - name: type
+          in: query
+          description: Account type
+          schema:
+            type: string
+            example: Checking
+        - name: customerID
+          in: query
+          description: Customer ID associated to accounts
+          schema:
+            type: string
+            example: cb9012eb
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          description: Mutapa.co User ID header, required in all requests
+          example: e3cdf999
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: An Account object that matches all query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accounts'
+        '404':
+          description: No account found for provided query parameters
+  /accounts/transactions:
+    post:
+      tags:
+        - Accounts
+      summary: Create Transaction
+      description: |
+        Post a transaction against multiple accounts. All transaction lines must sum to zero. No money is created or destroyed in a transaction - only moved from account to account. Accounts can be referred to in a Transaction without creating them first.
+      operationId: createTransaction
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          description: Mutapa.co User ID header, required in all requests
+          example: e3cdf999
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransaction'
+            example:
+              lines:
+                - accountID: entity1
+                  purpose: ACHDebit
+                  amount: 2500
+                - accountID: entity2
+                  purpose: ACHCredit
+                  amount: 2500
+      responses:
+        '200':
+          description: Transaction successfully created against the account(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Transaction was not created, see error(s)
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /accounts/{accountID}/transactions:
+    get:
+      tags:
+        - Accounts
+      summary: Get Account transactions
+      description: Get transactions for an account. Ordered descending from their posted date.
+      operationId: getAccountTransactions
+      parameters:
+        - name: accountID
+          in: path
+          description: Account ID
+          required: true
+          schema:
+            type: string
+            example: 098f3653-1dcb-4358-903e-4c7576f957f6
+        - name: limit
+          in: query
+          description: Maximum number of transactions to return
+          schema:
+            type: number
+            example: 25
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          description: Mutapa.co User ID header, required in all requests
+          example: e3cdf999
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transactions'
+              example:
+                lines:
+                  - accountID: entity1
+                    purpose: ACHDebit
+                    amount: 2500
+                  - accountID: entity2
+                    purpose: ACHCredit
+                    amount: 2500
+  '/accounts/transactions/{transactionID}/reversal':
+    post:
+      tags:
+        - Accounts
+      summary: Reverse a transaction
+      description: Reverse a transaction by debiting the credited and crediting the debited amounts among all accounts involved.
+      operationId: reverseTransaction
+      parameters:
+        - name: transactionID
+          in: path
+          description: Transaction ID
+          required: true
+          schema:
+            type: string
+            example: 3e2f66e2
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          description: Mutapa.co User ID header, required in all requests
+          example: e3cdf999
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Transaction reversal success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+              example:
+                lines:
+                  - accountID: entity1
+                    purpose: ACHDebit
+                    amount: 2500
+                  - accountID: entity2
+                    purpose: ACHCredit
+                    amount: 2500
+        '400':
+          description: Unable to reverse the specified transaction, check error(s).
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /accounts:
+    post:
+      tags:
+        - Accounts
+      summary: Create Account
+      description: Create an account for a Customer. Leaving the number blank will generate a random value.
+      operationId: createAccount
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          description: Mutapa.co User ID header, required in all requests
+          example: e3cdf999
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccount'
+      responses:
+        '200':
+          description: The created Account model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid user information, check error(s).
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+        '500':
+          description: 'Internal error, check error(s) and report the issue.'
+components:
+  schemas:
+    CreateAccount:
+      type: object
+      required:
+        - customerID
+        - balance
+        - name
+        - type
+      properties:
+        customerID:
+          type: string
+          description: Customer ID associated with accounts
+          example: 0c584689
+        balance:
+          type: integer
+          description: Initial balance of account in USD cents. This amount is to be deposited from an account at another Financial Institution or in-person (i.e. cash) on account creation.
+          example: 1000
+        name:
+          type: string
+          description: Caller defined label for this account.
+          example: Super Checking
+        number:
+          type: string
+          description: Random number to be used as unique to distinguish this Account
+          example: 12345
+        type:
+          type: string
+          description: Product type of the account
+          enum:
+            - Checking
+            - Savings
+            - FBO
+    Account:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+          description: The unique identifier for an account
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        customerID:
+          type: string
+          format: uuid
+          description: The unique identifier for the customer who owns the account
+          example: e210a9d6-d755-4455-9bd2-9577ea7e1081
+        name:
+          type: string
+          description: Caller defined label for this account.
+          example: Super Checking
+        accountNumber:
+          type: string
+          description: A unique Account number at the bank.
+          minimum: 8
+          maximum: 17
+          example: 987654321
+        accountNumberMasked:
+          type: string
+          description: Last four digits of an account number
+          minimum: 4
+          maximum: 4
+          example: 4321
+        routingNumber:
+          type: string
+          description: Routing Transit Number is a nine-digit number assigned by the ABA
+          minimum: 9
+          maximum: 9
+          example: "073000176"
+        status:
+          type: string
+          description: Status of the account being created.
+          enum:
+            - Open
+            - Closed
+        type:
+          type: string
+          description: Product type of the account
+          enum:
+            - Checking
+            - Savings
+            - FBO
+        createdAt:
+          type: string
+          format: date-time
+          example: '2016-08-29T09:12:33.001Z'
+        closedAt:
+          type: string
+          format: date-time
+          example: '2019-01-2T09:12:33.001Z'
+        lastModified:
+          type: string
+          format: date-time
+          description: Last time the object was modified except balances
+          example: '2016-08-29T09:12:33.001Z'
+        balance:
+          type: integer
+          description: Total balance of account in USD cents.
+          example: 1000
+        balanceAvailable:
+          type: integer
+          description: Balance available in USD cents to be drawn
+          example: 850
+        balancePending:
+          type: integer
+          description: Balance of pending transactions in USD cents
+          example: 100
+    Accounts:
+      type: array
+      items:
+        $ref: '#/components/schemas/Account'
+    CreateTransaction:
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionLine'
+    Transaction:
+      properties:
+        ID:
+          type: string
+          description: Unique ID of a transaction
+          example: 140fa826
+        timestamp:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionLine'
+    Transactions:
+      type: array
+      items:
+        $ref: '#/components/schemas/Transaction'
+    TransactionLine:
+      properties:
+        accountID:
+          type: string
+          description: Account ID
+          example: baa835b8
+        purpose:
+          type: string
+          enum:
+            - Transfer
+            - Fee
+            - Interest
+            - Wire
+            - ACHDebit
+            - ACHCredit
+        amount:
+          type: number
+          description: Change in account balance (in USD cents)
+          example: 2500
