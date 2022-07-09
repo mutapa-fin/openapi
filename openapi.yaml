@@ -1,7 +1,7 @@
 openapi: 3.0.2
 servers:
-  - description: Local development
-    url: http://localhost:8085
+  - description: Development Server
+    url: http://107.23.17.126:8085
 info:
   description: Mutapa.co Accounts is an HTTP service which represents both a general ledger and chart of accounts for customers. The service is designed to abstract over various core systems and provide a uniform API for developers.
   version: 1.0.0
