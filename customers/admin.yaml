@@ -1,0 +1,105 @@
+openapi: "3.0.2"
+info:
+  description: |
+    Customers focuses on solving authentic identification of humans who are legally able to hold and transfer currency within the US. Primarily this project solves [Know Your Customer](https://en.wikipedia.org/wiki/Know_your_customer) (KYC), [Customer Identification Program](https://en.wikipedia.org/wiki/Customer_Identification_Program) (CIP), [Office of Foreign Asset Control](https://www.treasury.gov/about/organizational-structure/offices/Pages/Office-of-Foreign-Assets-Control.aspx) (OFAC) checks and verification workflows to comply with US federal law and ensure authentic transfers. Also, Customers has an objective to be a service for detailed due diligence on individuals and companies for Financial Institutions and services in a modernized and extensible way.
+  version: v1
+  title: Customers Admin API
+  contact:
+    url: https://github.com/moov-io/customers
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:9097
+    description: Local development
+
+tags:
+  - name: Admin
+    description: Customers endpoints which are only meant to be exposed for admin dashboards and operations.
+  - name: Customers
+    description: Endpoints for searching, creating, and verifying individuals according to US government criteria for money movement within the country.
+
+paths:
+  /live:
+    get:
+      tags: [Admin]
+      summary: Get Liveness Probes
+      description: Get the status of each depdendency
+      operationId: getLivenessProbes
+      responses:
+        '200':
+          description: The status of dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
+        '400':
+          description: An error occurred when checking dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
+  /version:
+    get:
+      tags: [Admin]
+      summary: Get Version
+      description: Show the current version of Customers
+      operationId: getVersion
+      responses:
+        '200':
+          description: The current version running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: v0.4.0
+  /customers/{customerID}/disclaimers:
+    post:
+      tags: [Customers]
+      summary: Create disclaimer
+      description: Create a disclaimer for the specified customerID to approve
+      operationId: createCustomerDisclaimer
+      parameters:
+        - name: customerID
+          in: path
+          description: Customer ID
+          required: true
+          schema:
+            type: string
+            example: e210a9d6-d755-4455-9bd2-9577ea7e1081
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDisclaimer'
+      responses:
+        '200':
+          description: Created disclaimer
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
+components:
+  schemas:
+    LivenessProbes:
+      properties:
+        watchman:
+          type: string
+          description: Either an error from checking Customers or good as a string.
+          example: good
+    CreateUserDisclaimer:
+      properties:
+        documentId:
+          type: string
+          description: Optional ID for document to display alongside
+          example: ad3cb5fe
+        text:
+          type: string
+          description: Free form text agreement or policy to display
+          example: Please read and accept the attached document
+      required:
+        - text
