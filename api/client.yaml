@@ -5,17 +5,16 @@ info:
 
     An organization is a value used to isolate models from each other. This can be set to a "user ID" from your authentication service or any value your system has to identify.
 
-    There are also [admin endpoints](https://moov-io.github.io/paygate/admin/) for back-office operations.
   version: v1
   title: Paygate API
   contact:
-    url: https://github.com/moov-io/paygate
+    url: https://github.com/mutapa-fin/paygate
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
-  - url: http://localhost:8082
+  - url: http://107.23.17.126:8082
     description: Local development
 
 tags:
