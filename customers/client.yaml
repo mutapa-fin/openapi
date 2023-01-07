@@ -15,8 +15,8 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
-  - url: http://localhost:8087
-    description: Local development
+  - url: http://44.208.17.145:8087
+    description: Mutapa Server
 
 tags:
   - name: Configuration
